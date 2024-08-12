@@ -35,3 +35,12 @@ export PATH=${PATH}:/opt/apache-spark/bin
 ```bash
 $ spark-shell  # загрузится сессия
 ```
+
+Узнать версию Scala в `spark-shell` можно так
+```scala
+scala> scala.util.Properties.versionNumberString  // 2.12.18
+```
+или так
+```scala
+scala> scala.util.Properties.versionMsg  // Scala Library version 2.12.18 -- ...
+```
