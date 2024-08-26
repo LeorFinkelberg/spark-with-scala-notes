@@ -1,9 +1,13 @@
 ### Создать директорию в Zeppeline
 
-В ячейке пишем
+В ячейках пишем
 ```bash
+%md
+_Description ..._
+
 %sh
 echo HADOOP_HOME  # /opt/hadoop
+
 %sh
 $HADOOP_HOME/bin/hdfs dfs -mkdir /user/alexander.podvoyskiy/data
 ```
