@@ -1,3 +1,10 @@
+Ремарка: Узнать `applicationId` запущенного приложения в Zeppeline можно так
+```scala
+spark.sparkContext.applicationId
+// или так
+
+```
+
 Файл `*.scala` находится в директории 
 ``` bash
 odnoklassnikik-ml-core/odnoklassniki-analisys/scala/odkl/analysis/spark/feed/channels/
@@ -113,7 +120,223 @@ object ValueAttributionJob extends ExecutionContextV2SparkJobApp[
 	  s" unattributedClicked=${unattributedClicked.value},"
     )
   }
+
+def attribute(
+  portletInserterAudit: DataFrame,
+  sentFeeds: DataFrame,
+  shownFeeds: DataFrame,
+  clickedFeeds: DataFrame,
+  settings: ValueAttributionJobSettings,
+  unattributedSent: LongAccumulator,
+  unattribuedShown: LongAccumulator,
+  unattributedClicked: LongAccumulator,
+)(implicit encoder: Encoder[FeedInserterFunnel]): Dataset[FeedInserterFunnel] = {
+  val channelConfig = ChannelsConfig(
+    settings.bannerFeedTypes,
+    settings.portletFeedTypes,
+    settings.excludedFeedTypes,
+    settings.excludedPorletTypes,
+    settings.ignoredViewModeFilterFeedTypes,
+    settings.allowedViewModes,
+  )
+
+  val userIds = settings.userIds
+
+  val inserted = FeedInsert.collect(portletInserterAudit, userIds, settings.maxFeedPosition).persist()
+
+  val sent = FeedSend.collect(sentFeeds, userIds, channelsConfig, settings.maxFeedPosition).persist()
+  logWarning(s"Attribution stats: shows=${sent.count()}")
+
+  val shown = FeedShow.collect(shownFeeds, userIds, channelsConfig).persist()
+  logWarning(s"Attribution stats: shows=${shown.count()}")
+
+  val clicked = FeedClick.collect(clickedFeeds, userIds, settings.valueTargets).persist()
+  logWarning(s"Attribution stats: clicks=${clicked.count()}")
+
+  val insertedWithSent = mergeInsertsWithSent(inserted, sent, unattributedSent, settings.maxInsertSentTimeDeltaMillis)
+
+  val attributeUdf = udf { (userId: Long, platform: Byte, feedIdMarder: Option[String], renderId: Option[Long], sortedRows: Seq[Row]) => 
+    attribute(userId, platform, feedIdMarker, renderId, sortedRows)
+}
+
+insertedWithSent
+  .union(shown)
+  .union(cicked)
+  .groupBy(Field.userId, Field.platform, Field.feedIdMarker, Field.renderId)
+  .agg(
+    collect_list(struct(
+      col(Field.timestamp),
+      col(Field.channel),
+      col(Field.position),
+      col(Field.planTimestamp),
+      col(Field.sentTimestamp),
+      col(Field.plannerExperiment),
+      col(Field.targets),
+      col(Field.plan),
+      col(Field.crowdId),
+      col(Field.shows),
+      col(Field.clicks),
+      col(Field.event),
+    )).as(Field.events)
+  )
+  .select(
+    explode(attributeUdf(
+      col(Field.userId),
+      col(Field.platform),
+      col(Field.feedIdMarker),
+      col(Field.renderId),
+      col(Field.events)
+    )).as(Feild.event)
+  )
+  .select(
+    col(Field.event + ".*")
+  )
+  .filter { row => 
+    val channel = row.getAs[String](Field.channel)
+
+    val hasShows = row.getAs[Map[Long, Long]](Field.shows).nonEmpty
+    unattributedShown.add(if (channel == Constants.unattributed && hasShown) !l else 0L)
+
+    val hasClicks = row.getAs[Seq[Long]](Field.clicks).nonEmpty
+    unattributedClicked.add(if (channel == Constants.unattributed && hasClicks ) 1L else 0L)
+
+    channel != Constants.unattributed
+  }
+  .as[FeedInsertFunnel]
+
+private def attribute(
+  userId: Long,
+  platform: Byte,
+  feedIdMarker: Option[String],
+  renderId: Option[Long],
+  rows: Seq[Row]
+): Seq[FeedInsertFunnel] = {
+  val attributed = mutable.MutableList[FeedInsertFunnel]()
+  val current: Option[FeedInsertFunnel] = None
+
+  rows
+    .sortBy(_.getAs[Long](Field.timestamp))
+    .foreach {
+      row =>
+        val event = row.getAs[String](Field.event)
+        val funnel = FeedInsertFunnel.from(userId, platform, feedIdMarker, renderId, row)
+
+        (event, current) match {
+          case (Constants.send, sent) => 
+            attributed ++= sent
+            current = Some(funnel)
+
+          case (Constants.show, None) => 
+            attributed += funnel.copy(channel = Constants.unattributed)
+
+          case (Constants.show, Some(send)) => 
+            current = Some(FeedInsertFunnel.combineSentWithShow(send, funnel)) 
+
+          case (Constants.click, None) =>
+            attributed += funnel.copy(channel = Constants.unattributed)
+
+          case (Constants.Some(send)) =>
+            current = Some(FeedInsertFunnel.combineSentWithClick(send, funnel))
+        }
+    }
+  attributed ++ current
+}
+
+def mergeInsertsWithSent(
+  inserts: DataFrame,
+  sent: DataFrame,
+  unattributed: LongAccumulator,
+  maxTimeDeltaMillis: Long
+): DataFrame = {
+  val mergeInsertsWithSeenUdf = udf { (userId: Long, platform: Long, rows: Seq[Row]) =>
+    alignInsertsWithSent(userId, platform, rows, maxTimeDeltaMillis)
+  }
+
+  inserts
+    .union(sent)
+    .groupBy(Field.userId, Field.platform, Field.chunkId)
+    .agg(
+      collect_list(struct(
+        col(Field.channel),
+        col(Field.position),
+        col(Field.timestamp),
+        col(Field.planTimestamp),
+        col(Field.sentTimestamp),
+        col(Field.feedIdMarker),
+        col(Field.renderId),
+        col(Field.plannerExperiment),
+        col(Field.targets),
+        col(Field.plan),
+        col(Field.crowdId),
+        col(Field.event),
+      )).as(Field.events)
+    )
+    .select(
+      explode(mergeInsertsWithSeenUdf(col(Field.userId), col(Field.platform), col(Field.events))).as(Field.event)
+    )
+    .select(
+      col(Field.event + ".*")
+    )
+    .filter {
+      row => 
+        val channel = row.getAs[String](Field.channel)
+        unattributed.add(if (channel == Constants.unattributed) 1L else 0L)
+        channel != Constants.unattributed
+    }
+    .withColumn(Field.shows, lit(null).cast(FeedInsertFunnel.showsSchema))
+    .withColumn(Field.clicks, lit(null).cast(FeedInsertFunnel.clicksSchema))
+    .withColumn(Field.event, lit(Constants.send))
+}
+
+private def alignInsertsWithSent(
+  userId: Long,
+  platform: Long,
+  rows: Seq[Row],
+  maxTimeDeltaMillis: Long,
+): Seq[FeedInsertFunnel] = {
+  val inserts = rows.
+    .filter(row => row.getAs[String](Field.event) == Constants.audit)
+    .map(row => FeedInsertFunnel.from(userId, platform, row))
+    .sortBy(insert => insert.timestamp -> insert.position)
+    .toArray
+
+  val sents = rows
+    .filter(row => row.getAs[String](Field.event) == Constants.send)
+    .map(row => FeedInsertFunnel.from(userId, platform, row))
+    .sortBy(send => send.timestamp -> send.position)
+    .toArray
+
+  val insertIndex = 0
+  val sentIndex = 0
+  val result = mutable.MutableList[FeedInsertFunnel]()
+
+  while (insertIndex < inserts.length && sentIndex < sents.length) {
+    val insert = inserts(insertIndex)
+    val sent = sents(sentIndex)
+
+    if (insert.timestamp > sent.timestamp) {
+      result += sent.copy(channel = Constants.unattributed)
+      sentIndex += 1
+    } else if (sent.timestamp - insert.timestamp > maxTimeDeltaMillis) {
+      result += insert
+      insertIndex += 1
+    } else if (sent.position <= insert.position && insert.channel == sent.channel) {
+      resul += FeedInsertFunnel.combineInsertWithSent(insert, sent)
+      insertIndex += 1
+      sentIndex += 1
+    } else {
+      // some of the inserts could be skipped in sent
+      result += insert
+      insertIndex += 1
+    }
+  }
+  result ++= inserts.drop(insertIndex)
+  result ++= sents.drop(sentIndex).map(_.copy(channel = Constants.unattributed))
+
+  result
+}
 ```
+
 Ремарка: все что лежит в директории `odkl/analisys/spark/feed/channels/events/` как бы становится частью пространства имен того scala-файла, в котором выполняется инструкция. То есть все сущности (трейты, классы и пр.), которые лежат в scala-файлах этой директории будут доступны при импорте в манере
 ```scala
 import odkl.analysis.spark.feed.channels.events._ 
