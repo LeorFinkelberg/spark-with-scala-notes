@@ -101,6 +101,7 @@ object ValueAttributionJob extends ExecutionContextV2SparkJobApp[
       ).repartition(settings.outputPartitions).write
     )
 
+    // распаковываем список, который возвращается `.collect().head`
     val (sent, shows, clicks) = executionContext.output.attributedValues.read(sparkSession)
       .agg(
         count(when(col(Field.sentTimestamp) > 0, col(Field.sentTimestamp))).as(Field.sent),
@@ -108,8 +109,8 @@ object ValueAttributionJob extends ExecutionContextV2SparkJobApp[
         sum(size(col(Field.clicks))).as(Field.clicks),
       )
       .as[(Long, Long, Long)]
-      .collect()
-      .head
+      .collect() // возвращается список
+      .head  // просто забираем первый элемент списка 
 
     logWarning("Attribution stats:" +
       s" attributedSent=$sent," + 
@@ -141,7 +142,7 @@ def attribute(
   )
 
   val userIds = settings.userIds
-
+  // в директории events в файле FeedInsert есть объект FeedInsert
   val inserted = FeedInsert.collect(portletInserterAudit, userIds, settings.maxFeedPosition).persist()
 
   val sent = FeedSend.collect(sentFeeds, userIds, channelsConfig, settings.maxFeedPosition).persist()
