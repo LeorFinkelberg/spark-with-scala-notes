@@ -29,3 +29,24 @@ df.withColumn(
 ```bash
 userId | platform | ... | shows | clicks | timestamp | showMillis |
 ```
+
+Пример 
+```scala
+data
+  .drop("timestamp")  // после распаковки будет еще несколько "timestamp"
+  .withColumn("shows", explode_outer(col("shows")))
+  .select("*", "shows.*")
+  .withColumnRenamed("timestamp", "showTimestamp")
+  .withColumn("clicks", explode_outer(col("clicks")))
+  .select("*", "clicks.*")
+  .withColumnRenamed("timestamp", "clickTimestamp")
+  .groupBy("userId", "platform").agg(
+    collect_set(col("channel")) as "channel",
+    max(col("position")) as "maxPosition",
+    count(col("position")) as "groupPower",
+    count(col("clickTimestamp")) as "countClickTimestamp",
+    mean("showMillis") as "meanShowMillis",
+    stddev("showMillis") as "stdShowMillis",
+    count(col("showMillis")) as "countShowMillis"
+  ).show(5, 300, true)
+```
