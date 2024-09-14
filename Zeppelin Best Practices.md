@@ -30,6 +30,13 @@ val customerFeedChannelsSchema = StructType(Array(
     ...
 ))
 ```
+
+При чтении схемы набора данных `spark.read.schema(...).parquet(...)` могут возникать ошибки вида `... Column: [XXX], Expected: int, Found: INT64`. Это означает, что в схеме мы использовали тип `IntegerType`, а нужно `LongType`.
+
+Узнать тип данных атрибута можно так
+```scala
+df.schema("colName").dataType.typeName  // long
+```
 ### Создать директорию в Zeppeline
 
 В ячейках пишем
