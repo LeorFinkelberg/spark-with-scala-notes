@@ -20,7 +20,7 @@ Spark предоставляет методы `repartition` и `coalesce` для
 
 Вы можете отсортировать таски по наиболее долгим, залезть в логи `stderr`, где лежат все нужные логи Spark, и попробовать разобраться, что происходит.
 
-Очень полезно бывает задать схему, чтобы Spark не тратил время на вывод типов для атрибутов набора.
+Очень полезно бывает задать схему, чтобы Spark не тратил время на вывод типов для атрибутов набора. Подробности здесь https://sparkbyexamples.com/spark/spark-schema-explained-with-examples/
 ```scala
 import org.apache.spark.sql.types.{IntegerType, StringType, ..., StructType, StructField}
 
