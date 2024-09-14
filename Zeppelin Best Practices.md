@@ -19,6 +19,17 @@ Spark предоставляет методы `repartition` и `coalesce` для
 > SQL-запрос состоит из блоков, блоки раскладываются в джобы (Jobs), джобы раскладываются в этапы (Stages), этапы состоят из параллельных задач (Tasks)
 
 Вы можете отсортировать таски по наиболее долгим, залезть в логи `stderr`, где лежат все нужные логи Spark, и попробовать разобраться, что происходит.
+
+Очень полезно бывает задать схему, чтобы Spark не тратил время на вывод типов для атрибутов набора.
+```scala
+import org.apache.spark.sql.types.{IntegerType, StringType, ..., StructType, StructField}
+
+val customerFeedChannelsSchema = StructType(Array(
+    StructField("age", IntegerType, false),
+    StructField("countClick", IntegerType, false),
+    ...
+))
+```
 ### Создать директорию в Zeppeline
 
 В ячейках пишем
