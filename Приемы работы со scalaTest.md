@@ -155,16 +155,17 @@ class PrepareUserClustersJobSpec extends AnalysisSparkFlatSpec {
     }
 
     it should "get nCols of `customersPrepared` dataset" in new Fixture {
-      customersPrepared.columns.length shouldBe 38
+      customersPrepared.select("profile_age").collect()
+        should contain theSameElements Array(Row(6273), Row(4753), Row(2394))
     }
 
     it should "..." in new Fixture {
     // `pipelineTrained` и `X` определены в Fixture
 
-    val msgExpected = "assertion failed: Number of clusters ..."
-      intercept[AssertationError] {
-        PrepareUserClustersJob.getSilhouette(pipelineTrained.transform(X))
-      }.getMessage should msgExpected
+      val msgExpected = "assertion failed: Number of clusters ..."
+        intercept[AssertationError] {
+          PrepareUserClustersJob.getSilhouette(pipelineTrained.transform(X))
+        }.getMessage should msgExpected
     }
 }	
 ```
