@@ -150,8 +150,12 @@ class PrepareUserClustersJobSpec extends AnalysisSparkFlatSpec {
       ...
     }
 
-    it should "..." in new Fixture {
-      ...
+    it should "get nCols of `feedChannels` dataset" in new Fixture {
+      feedChannels.columns.length shouldBe 15
+    }
+
+    it should "get nCols of `customersPrepared` dataset" in new Fixture {
+      customersPrepared.columns.length shouldBe 38
     }
 
     it should "..." in new Fixture {
