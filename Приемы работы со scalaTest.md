@@ -120,7 +120,7 @@ class PrepareUserClustersJobSpec extends AnalysisSparkFlatSpec {
 
     ...
 	trait Fixture {
-	  val customers: DataFrame = Seq(
+	  val customers: DataFrame = Seq(  // последовательность case-class
 	    Customer(
 	      user_id = 4202088L,
 	      city_id = ...,
@@ -134,7 +134,7 @@ class PrepareUserClustersJobSpec extends AnalysisSparkFlatSpec {
 	    )
 	  ).toDF()
 	
-	  val feedChannels: DataFrame = Seq(
+	  val feedChannels: DataFrame = Seq( // последовательность case-class
 	    FeedChannel(
 	      userId = 42020088L,
 	      platform = 5,
