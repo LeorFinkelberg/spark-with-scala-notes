@@ -36,20 +36,46 @@ import org.apache.spark.ml.clustering.BisectingKMeansModel
 import org.apache.spark.ml.PipelineModel
 import org.mockito.Mockito.{mock, when}
 
-case class CustomersFeedChannels
+case class Customer
 (
-  age: Int,
-  profile_age: Int,
-  maxPositionBanner: Long,
+  user_id: Long,
+  city_id: Long,
+  birth_country_id: Option[Long], // передавать сюда можно либо Some(34345), либо null
   ...
+)
+
+// Эти структуры/кейс-классы нужны для описания конструкций типа
+// array of struct в df.printSchema
+case class ShowStruct(timestamp: Long, showMillis: Long)
+case class ClicksStruct(timestamp: Long)
+
+case class FeedChannels
+(
+  userId: Long,
+  platform: Long,
+  channel: String,
+  ...
+  targets: Map[String, Map[String, Double]],
+  plannerExperiment: String,
+  shows: Array[ShowStruct],
+  clicks: Array[ClicksStruct],
 )
 
 class PrepareUserClustersJobSpec extends AnalysisSparkFlatSpece {
   import testImplicits._
 
+  // Настройки PrepareUserClusterJobSettings описаны 
+  // в файле PrepareUserClusterJob.scala
   val settings = mock(classOf[PrepareUserClusterJobSettings])
   when(settings.nClusters).thenReturn(4)
   when(settings.randomSeed).thenReturn(42)
+  when(settings.meaningfulFeatureNames).thenReturn(
+    Array(
+      "age",
+      "profile_age",
+      ...
+    )
+  )
 
   private def fixture: Object {
     val X: DataFrame,
@@ -85,6 +111,58 @@ class PrepareUserClustersJobSpec extends AnalysisSparkFlatSpece {
     }
   }
 }
+```
+
+Здесь можно было бы разместить все наборы данных и прочие сущности в одном трейте `Fixture`
+```scala
+class PrepareUserClustersJobSpec extends AnalysisSparkFlatSpec {
+    import testImplicits._
+
+    ...
+	trait Fixture {
+	  val customers: DataFrame = Seq(
+	    Customer(
+	      user_id = 4202088L,
+	      city_id = ...,
+	      birth_country_id = Some(103345345L),
+	      ...
+	    ),
+	    Customer(
+	      user_id = ...,
+	      city_id = ...,
+	      ...
+	    )
+	  ).toDF()
+	
+	  val feedChannels: DataFrame = Seq(
+	    FeedChannel(
+	      userId = 42020088L,
+	      platform = 5,
+	      ...
+	      shows = Array(ShowStruct(1724934345L, 22489)) ,
+	      clicks = Array(ClicksStruct(34534534534L)),
+	    ),
+	    ...
+	  )
+	}
+
+    "PrepareUserClustersJobSpec" should "..." in new Fixture {
+      ...
+    }
+
+    it should "..." in new Fixture {
+      ...
+    }
+
+    it should "..." in new Fixture {
+    // `pipelineTrained` и `X` определены в Fixture
+
+    val msgExpected = "assertion failed: Number of clusters ..."
+      intercept[AssertationError] {
+        PrepareUserClustersJob.getSilhouette(pipelineTrained.transform(X))
+      }.getMessage should msgExpected
+    }
+}	
 ```
 
 В принципе, если не нравится ставить `f.` перед каждым именем переменной, то можно сделать так
