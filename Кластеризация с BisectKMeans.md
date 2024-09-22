@@ -1,5 +1,7 @@
 Подробности можно найти здесь https://spark.apache.org/docs/latest/ml-clustering.html#bisecting-k-means
 
+NB! `VectorAssembler` в выходной кадр данных включает все атрибуты, которые были переданы этому классу, а в `features` включает только атрибуты, указанные в `.setInputCols()`. Таким образом, например, можно передать кадр данных, который включает атрибут `userId`, а в `.setInputCols()` указать все атрибуты кроме `userId`, чтобы модель на нем обучалась. Тогда при построении прогноза итоговый кадр данных будет включать и `userId` и `predictions`.
+
 ```scala
 import org.apache.spark.ml.Pipeline
 import org.apache.spark.ml.feature.{Normalizer, RobustScaler}
