@@ -217,3 +217,12 @@ class ExampleSpec extends AnyFlatSpec {
   }
 }
 ```
+
+Проверить строку на соответствие регулярному выражению можно так
+```scala
+it should "completely match the regular expression pattern" in new Fixture {
+  userSegmentIndexToProbTest.split(";")(0).split(":", 2)(1) should fullyMatch regex Constants.pattern.r
+}
+```
+
+В этом примере предполагается, что в сценарии `Constants.scala` определен объект `Constants` , а в нем определена строка `pattern`, которую мы по месту превращаем в регулярное выражение с помощью метода `.r`.
