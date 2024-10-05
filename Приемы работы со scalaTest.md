@@ -235,7 +235,7 @@ it should "check ..." in new Fixture {
 }
 ```
 
-Проверить `TByteFloatHashMap` можно так
+Проверить `TByteFloatHashMap` https://trove4j.sourceforge.net/javadocs/gnu/trove/map/hash/TByteFloatHashMap.html можно так
 ```scala
 it should "check ..." in new Fixture {
   value.getDeepLayoutProbabilities(experiment, platform) shouldBe
