@@ -226,3 +226,19 @@ it should "completely match the regular expression pattern" in new Fixture {
 ```
 
 В этом примере предполагается, что в сценарии `Constants.scala` определен объект `Constants` , а в нем определена строка `pattern`, которую мы по месту превращаем в регулярное выражение с помощью метода `.r`.
+
+Проверку на то, что множество содержит какой-то элемент можно организовать так
+```scala
+it should "check ..." in new Fixture {
+  // круглые скобочки важны!
+  value.getExperiments should contain ("default")
+}
+```
+
+Проверить `TByteFloatHashMap` можно так
+```scala
+it should "check ..." in new Fixture {
+  value.getDeepLayoutProbabilities(experiment, platform) shouldBe
+    new TByteFloatHashMap(Array[Byte](8, 5, 3), Array(0.3f, 0.4f, 0.3f))
+}
+```
