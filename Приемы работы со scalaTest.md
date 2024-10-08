@@ -242,3 +242,16 @@ it should "check ..." in new Fixture {
     new TByteFloatHashMap(Array[Byte](8, 5, 3), Array(0.3f, 0.4f, 0.3f))
 }
 ```
+
+Проверить словари по ключам и значениям можно так
+```scala
+it should "..." in new Fixture {
+  converter.convert(layoutConfigTest) should (
+    contain key 0
+      and contain value Map(
+        "base" -> Map(10.toByte -> 0.1f, 5.toByte -> 0.8f, ...),
+        "deep" -> Map(8.toByte -> 0.3f, 5.toByte -> 0.4f, ...),
+      )
+  )
+}
+```
