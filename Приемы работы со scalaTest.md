@@ -238,8 +238,13 @@ it should "check ..." in new Fixture {
 Проверить `TByteFloatHashMap` https://trove4j.sourceforge.net/javadocs/gnu/trove/map/hash/TByteFloatHashMap.html можно так
 ```scala
 it should "check ..." in new Fixture {
-  value.getDeepLayoutProbabilities(experiment, platform) shouldBe
-    new TByteFloatHashMap(Array[Byte](8, 5, 3), Array(0.3f, 0.4f, 0.3f))
+  value.getDeepLayoutProbabilities(experiment, platform).keys()
+    shouldBe Array[Byte](10, 7, 3)
+}
+
+it should "check ..." in new Fixture {
+  value.getDeepLayoutProbabilities(experiment, platform).values()
+    shouldBe Array(0.1f, 0.3f, 0.6f)
 }
 ```
 
