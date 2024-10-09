@@ -266,12 +266,12 @@ it should "..." in new Fixture {
 import scala.jdk.CollectionConverters._
 
 it should "..." in new Fixture {
-  (value.getBaseLayoutProbabilities(experiment, platformType).keySet()).asScala
-    shouldBe Set[Byte](10, 5, 7)
+  (value.getBaseLayoutProbabilities(experiment, platformType).keySet().asScala
+    shouldBe Set[Byte](10, 5, 7))
 }
 
 it should "..." in new Fixture {
-  (value.getBaseLayoutProbabilities(experiment, platformType).values()).asScala.toArray
+  (value.getBaseLayoutProbabilities(experiment, platformType).values().asScala.toArray
     shouldBe Array(0.1f, 0.8f, 0.1f))
 }
 ```
