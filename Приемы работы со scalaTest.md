@@ -260,3 +260,18 @@ it should "..." in new Fixture {
   )
 }
 ```
+
+Если нужно проверить ключи ассоциативного массива Java, то можно сделать так
+```scala
+import scala.jdk.CollectionConverters._
+
+it should "..." in new Fixture {
+  (value.getBaseLayoutProbabilities(experiment, platformType).keySet()).asScala
+    shouldBe Set[Byte](10, 5, 7)
+}
+
+it should "..." in new Fixture {
+  (value.getBaseLayoutProbabilities(experiment, platformType).values()).asScala.toArray
+    shouldBe Array(0.1f, 0.8f, 0.1f))
+}
+```
