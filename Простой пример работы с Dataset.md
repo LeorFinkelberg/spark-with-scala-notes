@@ -102,8 +102,8 @@ val teamsWithLeague: DataFrame = teams.withColumn( // Получился DataFra
 ```scala
 teams.agg(
   Map(  // неизменяемый ассоциативный массив
-    "matches_played" => "avg", 
-    "goals_this_season" => "count" 
+    "matches_played" -> "avg", 
+    "goals_this_season" -> "count" 
   )
 ).show()
 ```
